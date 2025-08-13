@@ -1,0 +1,27 @@
+{
+  "name": "emojimosaic",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/man-o-valor/emojimosaic.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/man-o-valor/emojimosaic/issues"
+  },
+  "homepage": "https://github.com/man-o-valor/emojimosaic#readme",
+  "dependencies": {
+    "canvas": "^3.1.2",
+    "emoji-unicode": "^2.0.2",
+    "format-to-json": "^3.0.6",
+    "fs-extra": "^11.3.1",
+    "node-fetch": "^2.7.0",
+    "prompts": "^2.4.2",
+    "unicode-emoji-json": "^0.8.0"
+  }
+}
