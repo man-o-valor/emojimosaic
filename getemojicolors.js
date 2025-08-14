@@ -1,12 +1,10 @@
-const prompts = require("prompts");
+const inquirer = require("inquirer");
 const fetch = require("node-fetch");
-const fs = require("fs-extra");
+const fs = require("fs");
 const { PNG } = require("pngjs");
 const emojiUnicode = require("emoji-unicode");
 const formatToJson = require("format-to-json");
 const emojiData = require("unicode-emoji-json");
-
-const OUTPUT_BASE = "./emojis";
 
 const styles = {
   Noto: {
@@ -25,23 +23,44 @@ const styles = {
     filename: (emoji) =>
       emojiUnicode(emoji).split(" ").join("-").toLowerCase() + ".png",
   },
+  Fluent: {
+    baseUrl:
+      "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/",
+    filename: (emoji) => {
+      let name = emojiData[emoji]?.name || "";
+    const folder = name.replace(/^(\w+)/, (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase()).replace(/ /g, "%20");
+      const file = name.toLowerCase().replace(/ /g, "_") + "_3d.png";
+      return `${folder}/3D/${file}`;
+    },
+  },
+  Samsung: {
+    baseUrl:
+      "https://em-content.zobj.net/source/samsung/411/",
+    filename: (emoji) => {
+      const name = (emojiData[emoji]?.name || "").toLowerCase().replace(/ /g, "-");
+      const codepoint = emojiUnicode(emoji).split(" ").join("-");
+      return `${name}_${codepoint}.png`;
+    },
+  },
 };
 
 async function promptStyle() {
-  const response = await prompts({
-    type: "select",
-    name: "style",
-    message: "Which emoji design do you want to fetch?",
-    choices: Object.keys(styles).map((key) => ({ title: key, value: key })),
-  });
-
+  const response = await inquirer.prompt([
+    {
+      type: "list",
+      name: "style",
+      message: "Which emoji design do you want to fetch?",
+      choices: Object.keys(styles),
+    },
+  ]);
   return response.style;
 }
 
-async function downloadEmoji(emoji, styleConfig, outputDir) {
+async function downloadEmoji(emoji, styleConfig) {
   const filename = styleConfig.filename(emoji);
   const url = `${styleConfig.baseUrl}${filename}`;
   try {
+    console.log(`Downloading ${emoji} from ${url}`);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Not found: ${url}`);
     const buffer = await res.buffer();
@@ -102,19 +121,19 @@ async function downloadEmoji(emoji, styleConfig, outputDir) {
   let successCount = 0;
   let failCount = 0;
   for (const emoji of allEmojis) {
-    const result = await downloadEmoji(emoji, styleConfig, outputDir);
+    const result = await downloadEmoji(emoji, styleConfig);
     if (result) {
       colorMap[emoji] = result.color;
       successCount++;
+      const formattedjson = formatToJson(JSON.stringify(colorMap), {
+        withDetails: true,
+      });
+      fs.writeFileSync(jsonFile, formattedjson.result, "utf8");
     } else {
       failCount++;
     }
   }
 
-  const formattedjson = formatToJson(JSON.stringify(colorMap), {
-    withDetails: true,
-  });
-  fs.writeFileSync(jsonFile, formattedjson.result, "utf8");
   console.log(
     `🎉 Finished processing ${successCount} ${selectedStyle} emojis. Colors saved to ${jsonFile}`
   );

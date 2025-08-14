@@ -1,28 +1,33 @@
 const fs = require("fs");
 const path = require("path");
-const readline = require("readline");
+const inquirer = require("inquirer");
 const { createCanvas, loadImage } = require("canvas");
 
-function prompt(question) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) =>
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    })
-  );
-}
-
 (async () => {
-  let imagePath = await prompt("Enter the path to the image file: ");
-  imagePath = imagePath.trim();
-  if (!fs.existsSync(imagePath)) {
-    console.error("File does not exist.");
-    process.exit(1);
-  }
+  const designPrompt = await inquirer.prompt([
+    {
+      type: "list",
+      name: "design",
+      message: "Which emoji design do you want to use?",
+      choices: [
+        { name: "Noto", value: "noto" },
+        { name: "Twemoji", value: "twemoji" },
+        { name: "Fluent", value: "fluent" },
+        { name: "Samsung", value: "samsung" },
+      ],
+    },
+  ]);
+  const design = designPrompt.design;
+
+  const imagePrompt = await inquirer.prompt([
+    {
+      type: "input",
+      name: "imagePath",
+      message: "Enter the path to the image file:",
+      validate: (input) => fs.existsSync(input.trim()) ? true : "File does not exist.",
+    },
+  ]);
+  const imagePath = imagePrompt.imagePath.trim();
 
   let img;
   try {
@@ -35,13 +40,18 @@ function prompt(question) {
   const defaultHeight = img.height;
   console.log(`Image loaded. Resolution: ${defaultWidth}x${defaultHeight}`);
 
-  let resInput = await prompt(
-    `Enter output resolution (width,height) [default: ${defaultWidth},${defaultHeight}]: `
-  );
+  const resPrompt = await inquirer.prompt([
+    {
+      type: "input",
+      name: "resolution",
+      message: `Enter output resolution (width,height) [default: ${defaultWidth},${defaultHeight}]:`,
+      filter: (input) => input.trim(),
+    },
+  ]);
   let outWidth = defaultWidth,
     outHeight = defaultHeight;
-  if (resInput.trim()) {
-    const parts = resInput.split(",").map((x) => parseInt(x.trim()));
+  if (resPrompt.resolution) {
+    const parts = resPrompt.resolution.split(",").map((x) => parseInt(x.trim()));
     if (parts.length === 2 && parts.every(Number.isFinite)) {
       outWidth = parts[0];
       outHeight = parts[1];
@@ -69,8 +79,14 @@ function prompt(question) {
   }
   ctx.putImageData(imageData, 0, 0);
 
+  const colorFile = {
+    noto: "noto_colors.json",
+    twemoji: "twemoji_colors.json",
+    fluent: "fluent_colors.json",
+    samsung: "samsung_colors.json",
+  }[design];
   const emojiColors = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "data", "noto_colors.json"), "utf8")
+    fs.readFileSync(path.join(__dirname, "data", colorFile), "utf8")
   );
   const emojis = Object.keys(emojiColors);
 
