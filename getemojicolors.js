@@ -11,33 +11,51 @@ const styles = {
     baseUrl:
       "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/128/emoji_u",
     filename: (emoji) => {
-      let name = emojiUnicode(emoji).split(" ").join("_").toLowerCase();
-      if (name.endsWith("_fe0f")) {
-        name = name.replace(/_fe0f$/, "");
-      }
+      let name = emojiUnicode(emoji)
+        .split(" ")
+        .filter((code) => {
+          const c = code.toLowerCase();
+          return c !== "fe0f" && c !== "20e3";
+        })
+        .join("_")
+        .toLowerCase();
       return name + ".png";
     },
   },
   Twemoji: {
     baseUrl: "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/",
     filename: (emoji) =>
-      emojiUnicode(emoji).split(" ").join("-").toLowerCase() + ".png",
+      emojiUnicode(emoji)
+        .split(" ")
+        .filter((code) => code.toLowerCase() !== "fe0f")
+        .join("-")
+        .toLowerCase() + ".png",
   },
   Fluent: {
     baseUrl:
       "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/",
     filename: (emoji) => {
       let name = emojiData[emoji]?.name || "";
-    const folder = name.replace(/^(\w+)/, (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase()).replace(/ /g, "%20");
+      const folder = name
+        .replace(
+          /^(\w+)/,
+          (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase()
+        )
+        .replace(/ /g, "%20")
+        .replace(/,/g, "")
+        .replace(/'/g, "");
       const file = name.toLowerCase().replace(/ /g, "_") + "_3d.png";
       return `${folder}/3D/${file}`;
     },
   },
   Samsung: {
-    baseUrl:
-      "https://em-content.zobj.net/source/samsung/411/",
+    baseUrl: "https://em-content.zobj.net/source/samsung/411/",
     filename: (emoji) => {
-      const name = (emojiData[emoji]?.name || "").toLowerCase().replace(/ /g, "-");
+      const name = (emojiData[emoji]?.name || "")
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/,/g, "")
+        .replace(/'/g, "");
       const codepoint = emojiUnicode(emoji).split(" ").join("-");
       return `${name}_${codepoint}.png`;
     },
@@ -59,9 +77,11 @@ async function promptStyle() {
 async function downloadEmoji(emoji, styleConfig) {
   const filename = styleConfig.filename(emoji);
   const url = `${styleConfig.baseUrl}${filename}`;
+  console.log(`Downloading ${emoji} from ${url}`);
   try {
-    console.log(`Downloading ${emoji} from ${url}`);
     const res = await fetch(url);
+    const contentType = res.headers.get("content-type");
+    console.log(`Content-Type for ${emoji}: ${contentType}`);
     if (!res.ok) throw new Error(`Not found: ${url}`);
     const buffer = await res.buffer();
     const png = PNG.sync.read(buffer);
@@ -70,6 +90,7 @@ async function downloadEmoji(emoji, styleConfig) {
       bSum = 0,
       aSum = 0,
       count = 0;
+    let rgbCount = 0;
     for (let y = 0; y < png.height; y++) {
       for (let x = 0; x < png.width; x++) {
         const idx = (png.width * y + x) << 2;
@@ -77,18 +98,21 @@ async function downloadEmoji(emoji, styleConfig) {
         const g = png.data[idx + 1];
         const b = png.data[idx + 2];
         const a = png.data[idx + 3];
-        rSum += r;
-        gSum += g;
-        bSum += b;
         aSum += a;
         count++;
+        if (a > 0) {
+          rSum += r;
+          gSum += g;
+          bSum += b;
+          rgbCount++;
+        }
       }
     }
-    if (count === 0) throw new Error("No visible pixels");
+    if (rgbCount === 0) throw new Error("No visible pixels");
     const avgColor = {
-      r: Math.round(rSum / count),
-      g: Math.round(gSum / count),
-      b: Math.round(bSum / count),
+      r: Math.round(rSum / rgbCount),
+      g: Math.round(gSum / rgbCount),
+      b: Math.round(bSum / rgbCount),
       a: Math.round(aSum / count),
     };
     let unicodeKey;
@@ -102,6 +126,7 @@ async function downloadEmoji(emoji, styleConfig) {
     }
     return { emoji, unicode: unicodeKey, color: avgColor };
   } catch (err) {
+    console.error(`Error downloading ${emoji}:`, err.message);
     return null;
   }
 }
@@ -117,6 +142,7 @@ async function downloadEmoji(emoji, styleConfig) {
   const allEmojis = Object.keys(emojiData);
   const colorMap = {};
   const jsonFile = `./data/${selectedStyle.toLowerCase()}_colors.json`;
+  console.log(`Writing to file "${jsonFile}"`);
 
   let successCount = 0;
   let failCount = 0;
@@ -129,7 +155,9 @@ async function downloadEmoji(emoji, styleConfig) {
         withDetails: true,
       });
       fs.writeFileSync(jsonFile, formattedjson.result, "utf8");
+      console.log(`✅ Successfully processed emoji: ${emoji}`);
     } else {
+      console.error(`❌ Failed to process emoji: ${emoji}`);
       failCount++;
     }
   }
