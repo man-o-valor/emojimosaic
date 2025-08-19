@@ -1,179 +1,39 @@
 const fs = require("fs");
 const path = require("path");
-const inquirer = require("inquirer");
 const { createCanvas, loadImage } = require("canvas");
+const emojiUnicode = require("emoji-unicode");
 
-(async () => {
-  const designPrompt = await inquirer.prompt([
-    {
-      type: "list",
-      name: "design",
-      message: "Which emoji design do you want to use?",
-      choices: [
-        { name: "Noto", value: "noto" },
-        { name: "Twemoji", value: "twemoji" },
-        { name: "Fluent", value: "fluent" },
-        { name: "Samsung", value: "samsung" },
-      ],
-    },
-  ]);
-  const design = designPrompt.design;
+async function generateMosaic(config) {
+  const {
+    design,
+    imagePath,
+    width,
+    height,
+    ignoreAlpha,
+    bgColor,
+    includeEmojis,
+    excludeEmojis,
+    includeZwj,
+    outputAsImage,
+    HDOutput,
+  } = config;
 
-  const imagePrompt = await inquirer.prompt([
-    {
-      type: "input",
-      name: "imagePath",
-      message: "Enter the path to the image file:",
-      validate: (input) =>
-        fs.existsSync(input.trim()) ? true : "File does not exist.",
-    },
-  ]);
-  const imagePath = imagePrompt.imagePath.trim();
-
-  let img;
-  try {
-    img = await loadImage(imagePath);
-  } catch (err) {
-    console.error("Failed to load image:", err);
-    process.exit(1);
-  }
-  const defaultWidth = img.width;
+  const img = await loadImage(imagePath);
   const aspectRatio = img.height / img.width;
-  let defaultHeight = img.height;
-  console.log(`Image loaded. Resolution: ${defaultWidth}x${defaultHeight}`);
+  const outWidth = width || img.width;
+  const outHeight = height || Math.round(width * aspectRatio);
 
-  const resPrompt = await inquirer.prompt([
-    {
-      type: "input",
-      name: "outWidth",
-      message: `Enter output width:`,
-      default: "100",
-      filter: (input) => input.trim(),
-      validate: (input) => {
-        if (!input) return true;
-        const val = parseInt(input);
-        return Number.isFinite(val) && val > 0
-          ? true
-          : "Enter a positive integer.";
-      },
-    },
-    {
-      type: "input",
-      name: "outHeight",
-      message: `Enter output height:`,
-      filter: (input) => input.trim(),
-      validate: (input) => {
-        if (!input) return true;
-        const val = parseInt(input);
-        return Number.isFinite(val) && val > 0
-          ? true
-          : "Enter a positive integer.";
-      },
-    },
-  ]);
-  let outWidth = defaultWidth;
-  if (resPrompt.outWidth) {
-    outWidth = parseInt(resPrompt.outWidth);
-  }
-  let outHeight;
-  if (resPrompt.outHeight) {
-    outHeight = parseInt(resPrompt.outHeight);
-  } else {
-    outHeight = Math.round(outWidth * aspectRatio);
-  }
-  console.log(`Output resolution set to: ${outWidth}x${outHeight}`);
-  const alphaPrompt = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "ignoreAlpha",
-      message: "Ignore alpha channel (less clear image, more emoji variation)?",
-      default: false,
-    },
-  ]);
-  let bgColor = { r: 0, g: 0, b: 0 };
-  if (!alphaPrompt.ignoreAlpha) {
-    const bgPrompt = await inquirer.prompt([
-      {
-        type: "input",
-        name: "bgColor",
-        message: "Enter background color as r,g,b:",
-        default: "0,0,0",
-        filter: (input) => input.trim(),
-      },
-    ]);
-    if (bgPrompt.bgColor) {
-      const parts = bgPrompt.bgColor.split(",").map((x) => parseInt(x.trim()));
-      if (parts.length === 3 && parts.every(Number.isFinite)) {
-        bgColor = { r: parts[0], g: parts[1], b: parts[2] };
-      }
-    }
-  }
-  const includeModePrompt = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "chooseInclude",
-      message:
-        "Do you want to choose emojis to include (and exclude all others)?",
-      default: false,
-    },
-  ]);
-  let includeSet = null;
-  let excludeSet = null;
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
-  if (includeModePrompt.chooseInclude) {
-    const includePrompt = await inquirer.prompt([
-      {
-        type: "input",
-        name: "includeEmojis",
-        message: "Enter emojis to include (as a string):",
-        filter: (input) => input.trim(),
-      },
-    ]);
-    includeSet = new Set(
-      Array.from(
-        segmenter.segment(includePrompt.includeEmojis),
-        (seg) => seg.segment
+  const includeSet = includeEmojis
+    ? new Set(
+        Array.from(segmenter.segment(includeEmojis), (seg) => seg.segment)
       )
-    );
-  } else {
-    const excludePrompt = await inquirer.prompt([
-      {
-        type: "input",
-        name: "excludeEmojis",
-        message: "Enter emojis to exclude:",
-        filter: (input) => input.trim(),
-      },
-    ]);
-    excludeSet = new Set(
-      Array.from(
-        segmenter.segment(excludePrompt.excludeEmojis),
-        (seg) => seg.segment
+    : null;
+  const excludeSet = excludeEmojis
+    ? new Set(
+        Array.from(segmenter.segment(excludeEmojis), (seg) => seg.segment)
       )
-    );
-    excludeSet = new Set(
-      Array.from(
-        segmenter.segment(excludePrompt.excludeEmojis),
-        (seg) => seg.segment
-      )
-    );
-  }
-
-  const zwjPrompt = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "includeZwj",
-      message: "Include ZWJ (multi-character) emojis?",
-      default: true,
-    },
-  ]);
-  const outputImagePrompt = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "outputAsImage",
-      message: "Output as image?",
-      default: false,
-    },
-  ]);
+    : null;
 
   const canvas = createCanvas(outWidth, outHeight);
   const ctx = canvas.getContext("2d");
@@ -208,11 +68,11 @@ const { createCanvas, loadImage } = require("canvas");
       bestEmoji = emojis[0];
     for (const emoji of emojis) {
       if (includeSet && !includeSet.has(emoji)) continue;
-      if (!includeSet && excludeSet.has(emoji)) continue;
-      if (!zwjPrompt.includeZwj && [...emoji].length > 1) continue;
+      if (!includeSet && excludeSet && excludeSet.has(emoji)) continue;
+      if (!includeZwj && [...emoji].length > 1) continue;
       const ec = emojiColors[emoji];
       let testR, testG, testB;
-      if (alphaPrompt.ignoreAlpha) {
+      if (ignoreAlpha) {
         testR = ec.r;
         testG = ec.g;
         testB = ec.b;
@@ -246,7 +106,7 @@ const { createCanvas, loadImage } = require("canvas");
     mosaic += "\n";
   }
 
-  if (outputImagePrompt.outputAsImage) {
+  if (outputAsImage) {
     const emojiSize = 72;
     const spacing = 8;
     const gridWidth = outWidth * (emojiSize + spacing) - spacing;
@@ -256,7 +116,7 @@ const { createCanvas, loadImage } = require("canvas");
     outCtx.fillStyle = `rgb(${bgColor.r},${bgColor.g},${bgColor.b})`;
     outCtx.fillRect(0, 0, gridWidth, gridHeight);
 
-    const { styles } = require("./emojistyles.js");
+    const { styles } = require("./emojistyles");
 
     const styleConfig =
       styles[design.charAt(0).toUpperCase() + design.slice(1)];
@@ -284,11 +144,12 @@ const { createCanvas, loadImage } = require("canvas");
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Not found: ${url}`);
         const buffer = await res.buffer();
-        const filePath = path.join(tempDir, `${emoji}.png`);
+        const filePath = path.join(tempDir, `${emojiUnicode(emoji)}.png`);
         fs.writeFileSync(filePath, buffer);
         emojiImagePaths[emoji] = filePath;
       } catch (err) {
         console.error(`Failed to fetch emoji ${emoji}: ${url}`);
+        console.error(err);
       }
     }
 
@@ -313,9 +174,9 @@ const { createCanvas, loadImage } = require("canvas");
         }
       }
     }
-    const outImagePath = path.join(path.dirname(imagePath), "mosaic.png");
-    if (gridWidth !== defaultWidth || gridHeight !== defaultHeight) {
-      const resizeCanvas = createCanvas(defaultWidth, defaultHeight);
+    let buffer;
+    if (!HDOutput) {
+      const resizeCanvas = createCanvas(img.width, img.height);
       const resizeCtx = resizeCanvas.getContext("2d");
       resizeCtx.drawImage(
         outCanvas,
@@ -325,15 +186,15 @@ const { createCanvas, loadImage } = require("canvas");
         gridHeight,
         0,
         0,
-        defaultWidth,
-        defaultHeight
+        img.width,
+        img.height
       );
-      fs.writeFileSync(outImagePath, resizeCanvas.toBuffer("image/png"));
+      buffer = resizeCanvas.toBuffer("image/png");
     } else {
-      fs.writeFileSync(outImagePath, outCanvas.toBuffer("image/png"));
+      buffer = outCanvas.toBuffer("image/png");
     }
-    console.log(`Mosaic image saved to: ${outImagePath}`);
 
+    // Clean up temp files
     for (const file of fs.readdirSync(tempDir)) {
       fs.unlinkSync(path.join(tempDir, file));
     }
@@ -345,9 +206,12 @@ const { createCanvas, loadImage } = require("canvas");
     } catch (err) {
       console.error("Error deleting temp base directory:", err);
     }
+
+    return { buffer, mimeType: "image/png", filename: `mosaic.png` };
   } else {
-    const mosaicPath = path.join(path.dirname(imagePath), "mosaic.txt");
-    fs.writeFileSync(mosaicPath, mosaic);
-    console.log(`Mosaic saved to: ${mosaicPath}`);
+    const buffer = Buffer.from(mosaic, "utf8");
+    return { buffer, mimeType: "text/plain", filename: `mosaic.txt` };
   }
-})();
+}
+
+module.exports = { generateMosaic };

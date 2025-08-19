@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Emoji Mosaic</title>
+    <style>
+      .download-button {
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: #00ff08;
+        color: #ffff00;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-top: 10px;
+      }
+
+      .download-button:hover {
+        background-color: #45a049;
+      }
+
+      .loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #3498db;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Emoji Mosaic Generator</h1>
+    <form id="mosaicForm" enctype="multipart/form-data">
+      <label>Choose Emoji Design:</label>
+      <select name="design">
+        <option value="noto">Noto</option>
+        <option value="twemoji">Twemoji</option>
+        <option value="fluent">Fluent</option>
+        <option value="samsung">Samsung</option></select
+      ><br /><br />
+
+      <div
+        id="dropZone"
+        style="
+          border: 2px dashed #ccc;
+          padding: 20px;
+          text-align: center;
+          margin-bottom: 10px;
+          cursor: pointer;
+        "
+      >
+        Drag & Drop Image Here or Click to Select
+      </div>
+      <input
+        type="file"
+        name="image"
+        accept="image/*"
+        required
+        style="display: none"
+      />
+      <img
+        id="preview"
+        src=""
+        alt="Image Preview"
+        style="max-width: 300px; margin-top: 10px; display: none"
+      />
+
+      <label>Output Width:</label>
+      <input type="number" name="width" value="100" /><br /><br />
+
+      <label>Output Height (optional):</label>
+      <input type="number" name="height" /><br /><br />
+
+      <label>Ignore Alpha Channel:</label>
+      <input type="checkbox" name="ignoreAlpha" /><br /><br />
+
+      <label>Background Color (r,g,b):</label>
+      <input type="text" name="bgColor" value="0,0,0" /><br /><br />
+
+      <label>Include Emojis:</label>
+      <input type="text" name="includeEmojis" /><br /><br />
+
+      <label>Exclude Emojis:</label>
+      <input type="text" name="excludeEmojis" /><br /><br />
+
+      <label>Include ZWJ Emojis:</label>
+      <input type="checkbox" name="includeZwj" checked /><br /><br />
+
+      <label>Output as Image:</label>
+      <input type="checkbox" name="outputAsImage" /><br /><br />
+
+      <label>HD image:</label>
+      <input type="checkbox" name="HDOutput" /><br /><br />
+
+      <button type="submit">Generate Mosaic</button>
+    </form>
+
+    <pre id="output"></pre>
+    <div id="result"></div>
+    <div id="loader" class="loader" style="display: none"></div>
+
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const imageInput = document.querySelector('input[name="image"]');
+      const preview = document.getElementById("preview");
+
+      // Click to open file picker
+      dropZone.addEventListener("click", () => imageInput.click());
+
+      // Drag over styling
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = "#00ff08";
+      });
+
+      // Drag leave styling
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.style.borderColor = "#ccc";
+      });
+
+      // Drop file
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = "#ccc";
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith("image/")) {
+          imageInput.files = e.dataTransfer.files;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            preview.src = event.target.result;
+            preview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Also show preview when using file picker
+      imageInput.addEventListener("change", () => {
+        const file = imageInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.src = "";
+          preview.style.display = "none";
+        }
+      });
+
+      imageInput.addEventListener("change", () => {
+        const file = imageInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.src = "";
+          preview.style.display = "none";
+        }
+      });
+      document
+        .getElementById("mosaicForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          // Show loader
+          document.getElementById("loader").style.display = "block";
+          document.getElementById("result").innerHTML = "";
+          document.getElementById("output").textContent = "";
+
+          const formData = new FormData(e.target);
+          const res = await fetch("/run", {
+            method: "POST",
+            body: formData,
+          });
+
+          // Hide loader
+          document.getElementById("loader").style.display = "none";
+
+          if (!res.ok) {
+            document.getElementById("output").textContent =
+              "Error generating mosaic.";
+            return;
+          }
+
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const filename =
+            res.headers.get("Content-Disposition")?.split("filename=")[1] ||
+            "mosaic";
+
+          const downloadLink = document.createElement("a");
+          downloadLink.href = url;
+          downloadLink.download = filename.replace(/"/g, "");
+          downloadLink.textContent = "Download Mosaic";
+          downloadLink.className = "download-button";
+
+          const resultDiv = document.getElementById("result");
+          resultDiv.innerHTML = "";
+          resultDiv.appendChild(downloadLink);
+        });
+    </script>
+  </body>
+</html>
