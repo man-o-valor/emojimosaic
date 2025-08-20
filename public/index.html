@@ -416,7 +416,7 @@
           output.textContent = "";
 
           const formData = new FormData(e.target);
-          const res = await fetch("/run", {
+          const res = await fetch("/api/run", {
             method: "POST",
             body: formData,
           });
