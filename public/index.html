@@ -1,133 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Emoji Mosaic</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emoji Mosaic Generator</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
+      /* Reset and Base Styles */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: "Montserrat", sans-serif;
+        background: #1c1c1c;
+        color: #fff;
+      }
+
+      /* Typography and Form Elements */
+      h1 {
+        text-align: center;
+        padding: 30px 0;
+        font-size: 2rem;
+      }
+
+      label {
+        display: block;
+        margin: 15px 0 5px;
+        font-weight: 600;
+        padding: 10px;
+      }
+
+      input,
+      button,
+      select,
+      .download-button,
+      .drag-drop-area {
+        font-family: "Montserrat", sans-serif;
+      }
+
+      input,
+      select {
+        width: 100%;
+        max-width: 100%;
+        font-size: 1rem;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #1c1c1c;
+        background-color: #2b2b2b;
+        color: #fff;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: #888;
+        font-style: italic;
+      }
+
+      input[type="checkbox"] {
+        margin-right: 6px;
+      }
+
+      /* Buttons */
+      button[type="submit"],
       .download-button {
-        display: inline-block;
-        padding: 10px 15px;
-        background-color: #00ff08;
-        color: #ffff00;
+        background-color: #1976d2;
+        color: #fff;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-top: 20px;
+        width: 100%;
         text-decoration: none;
-        border-radius: 5px;
-        margin-top: 10px;
+        font-weight: 600;
       }
 
+      button:hover,
       .download-button:hover {
-        background-color: #45a049;
+        background-color: #2262dd;
       }
 
+      /* Drop Zone */
+      #dropZone {
+        border: 2px dashed #1c1c1c;
+        padding: 20px;
+        text-align: center;
+        margin-top: 10px;
+        border-radius: 8px;
+        background-color: #1c1c1c;
+        transition: border-color 0.3s ease;
+      }
+
+      /* Checkbox Styling */
+      .custom-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .custom-checkbox input[type="checkbox"] {
+        display: none;
+      }
+
+      .custom-checkbox .checkmark {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #555;
+        border-radius: 4px;
+        position: relative;
+      }
+
+      .custom-checkbox input[type="checkbox"]:checked + .checkmark::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 4px;
+        width: 6px;
+        height: 6px;
+        background-color: #fff;
+        border: solid #fff;
+        border-width: 4px;
+      }
+
+      /* Image Preview */
+      #preview {
+        display: block;
+        margin: 20px auto;
+        max-width: 100%;
+        border-radius: 8px;
+      }
+
+      /* Result and Output */
+      #result,
+      #output {
+        text-align: center;
+        margin: 20px auto;
+        max-width: 600px;
+      }
+
+      /* Loader */
       .loader {
-        border: 8px solid #f3f3f3;
-        border-top: 8px solid #3498db;
+        border: 6px solid transparent;
+        border-top: 6px solid #1976d2;
         border-radius: 50%;
-        width: 60px;
-        height: 60px;
+        width: 50px;
+        height: 50px;
         animation: spin 1s linear infinite;
         margin: 20px auto;
       }
 
       @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
+        to {
           transform: rotate(360deg);
         }
       }
+
+      /* Layout Containers */
+      .background-container {
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bg-zone {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        clip-path: inset(0);
+        z-index: 0;
+      }
+
+      /* Backgrounds */
+      .bg-left,
+      .bg-right {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 500%;
+        height: 500%;
+        background-repeat: repeat;
+        background-size: 3000px;
+        transform: rotate(-10deg);
+        animation: scroll-bg 120s linear infinite;
+        z-index: 0;
+      }
+
+      .bg-left {
+        background-image: url("starry.jpg");
+      }
+
+      .bg-right {
+        background-image: url("starryemojishd.png");
+      }
+
+      @keyframes scroll-bg {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: -3000px -3678px;
+        }
+      }
+
+      /* Form Styling */
+      .main-form {
+        position: relative;
+        z-index: 2;
+        max-width: 600px;
+        margin: auto;
+        background: #2b2b2b;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+        max-height: 100vh;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE 10+ */
+      }
+
+      .main-form::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
+      }
     </style>
   </head>
+  <head>
+    <title>Emoji Mosaic</title>
+  </head>
   <body>
-    <h1>Emoji Mosaic Generator</h1>
-    <form id="mosaicForm" enctype="multipart/form-data">
-      <label>Choose Emoji Design:</label>
-      <select name="design">
-        <option value="noto">Noto</option>
-        <option value="twemoji">Twemoji</option>
-        <option value="fluent">Fluent</option>
-        <option value="samsung">Samsung</option></select
-      ><br /><br />
-
-      <div
-        id="dropZone"
-        style="
-          border: 2px dashed #ccc;
-          padding: 20px;
-          text-align: center;
-          margin-bottom: 10px;
-          cursor: pointer;
-        "
-      >
-        Drag & Drop Image Here or Click to Select
+    <div class="background-container">
+      <div class="bg-zone bg-left-zone">
+        <div class="bg-left"></div>
       </div>
-      <input
-        type="file"
-        name="image"
-        accept="image/*"
-        required
-        style="display: none"
-      />
-      <img
-        id="preview"
-        src=""
-        alt="Image Preview"
-        style="max-width: 300px; margin-top: 10px; display: none"
-      />
+      <form class="main-form" id="mosaicForm" enctype="multipart/form-data">
+        <h1>Emoji Mosaic Generator</h1>
+        <label>Choose Emoji Design:</label>
+        <select name="design">
+          <option value="noto">Noto (Google)</option>
+          <option value="twemoji">Twemoji (Twitter, Discord)</option>
+          <option value="fluent">Fluent (Windows 11)</option>
+          <option value="samsung">Samsung</option>
+        </select>
 
-      <label>Output Width:</label>
-      <input type="number" name="width" value="100" /><br /><br />
+        <div
+          id="dropZone"
+          style="
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+          "
+        >
+          Drop Image Here or Click to Select
+        </div>
+        <input
+          type="file"
+          name="image"
+          accept=".png, .jpg, .jpeg"
+          required
+          style="display: none"
+        />
+        <img
+          id="preview"
+          src=""
+          alt="Image Preview"
+          style="max-width: 300px; margin-top: 10px; display: none"
+        />
 
-      <label>Output Height (optional):</label>
-      <input type="number" name="height" /><br /><br />
+        <label>Output Width:</label>
+        <input type="number" name="width" value="50" />
 
-      <label>Ignore Alpha Channel:</label>
-      <input type="checkbox" name="ignoreAlpha" /><br /><br />
+        <label>Output Height:</label>
+        <input type="number" name="height" placeholder="optional" />
 
-      <label>Background Color (r,g,b):</label>
-      <input type="text" name="bgColor" value="0,0,0" /><br /><br />
+        <label class="custom-checkbox">
+          <input type="checkbox" name="ignoreAlpha" />
+          <span class="checkmark"></span>
+          Ignore Transparency
+        </label>
 
-      <label>Include Emojis:</label>
-      <input type="text" name="includeEmojis" /><br /><br />
+        <label>Background Color (r,g,b):</label>
+        <input type="text" name="bgColor" value="0,0,0" />
 
-      <label>Exclude Emojis:</label>
-      <input type="text" name="excludeEmojis" /><br /><br />
+        <label>Include Emojis:</label>
+        <input
+          type="text"
+          name="includeEmojis"
+          placeholder="include only emojis typed here, otherwise use any emojis"
+        />
 
-      <label>Include ZWJ Emojis:</label>
-      <input type="checkbox" name="includeZwj" checked /><br /><br />
+        <label>Exclude Emojis:</label>
+        <input
+          type="text"
+          name="excludeEmojis"
+          placeholder="exclude only emojis typed here, otherwise exclude none"
+        />
 
-      <label>Output as Image:</label>
-      <input type="checkbox" name="outputAsImage" /><br /><br />
+        <label class="custom-checkbox">
+          <input type="checkbox" name="includeZwj" checked />
+          <span class="checkmark"></span>
+          Include ZWJ Emojis
+        </label>
 
-      <label>HD image:</label>
-      <input type="checkbox" name="HDOutput" /><br /><br />
+        <label class="custom-checkbox">
+          <input type="checkbox" name="outputAsImage" checked />
+          <span class="checkmark"></span>
+          Output as Image
+        </label>
 
-      <button type="submit">Generate Mosaic</button>
-    </form>
+        <label class="custom-checkbox">
+          <input type="checkbox" name="HDOutput" />
+          <span class="checkmark"></span>
+          HD Image
+        </label>
 
-    <pre id="output"></pre>
-    <div id="result"></div>
-    <div id="loader" class="loader" style="display: none"></div>
+        <button type="submit">Generate Mosaic</button>
+
+        <pre id="output"></pre>
+        <div id="result"></div>
+        <div id="loader" class="loader" style="display: none"></div>
+      </form>
+      <div class="bg-zone bg-right-zone">
+        <div class="bg-right"></div>
+      </div>
+    </div>
 
     <script>
       const dropZone = document.getElementById("dropZone");
       const imageInput = document.querySelector('input[name="image"]');
       const preview = document.getElementById("preview");
 
-      // Click to open file picker
       dropZone.addEventListener("click", () => imageInput.click());
 
-      // Drag over styling
       dropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
         dropZone.style.borderColor = "#00ff08";
       });
 
-      // Drag leave styling
       dropZone.addEventListener("dragleave", () => {
         dropZone.style.borderColor = "#ccc";
       });
 
-      // Drop file
       dropZone.addEventListener("drop", (e) => {
         e.preventDefault();
         dropZone.style.borderColor = "#ccc";
@@ -145,7 +373,6 @@
         }
       });
 
-      // Also show preview when using file picker
       imageInput.addEventListener("change", () => {
         const file = imageInput.files[0];
         if (file) {
@@ -180,10 +407,13 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
 
-          // Show loader
-          document.getElementById("loader").style.display = "block";
-          document.getElementById("result").innerHTML = "";
-          document.getElementById("output").textContent = "";
+          const loader = document.getElementById("loader");
+          const resultDiv = document.getElementById("result");
+          const output = document.getElementById("output");
+
+          loader.style.display = "block";
+          resultDiv.innerHTML = "";
+          output.textContent = "";
 
           const formData = new FormData(e.target);
           const res = await fetch("/run", {
@@ -191,29 +421,42 @@
             body: formData,
           });
 
-          // Hide loader
-          document.getElementById("loader").style.display = "none";
+          loader.style.display = "none";
 
           if (!res.ok) {
-            document.getElementById("output").textContent =
-              "Error generating mosaic.";
+            output.textContent = "Error generating mosaic.";
             return;
           }
 
+          const contentType = res.headers.get("Content-Type");
           const blob = await res.blob();
           const url = URL.createObjectURL(blob);
           const filename =
-            res.headers.get("Content-Disposition")?.split("filename=")[1] ||
-            "mosaic";
+            res.headers
+              .get("Content-Disposition")
+              ?.split("filename=")[1]
+              ?.replace(/"/g, "") || "mosaic";
+
+          if (contentType.startsWith("image/")) {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = "Mosaic Preview";
+            img.style.maxWidth = "100%";
+            img.style.borderRadius = "8px";
+            resultDiv.appendChild(img);
+          } else if (contentType.startsWith("text/")) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              output.textContent = reader.result;
+            };
+            reader.readAsText(blob);
+          }
 
           const downloadLink = document.createElement("a");
           downloadLink.href = url;
-          downloadLink.download = filename.replace(/"/g, "");
-          downloadLink.textContent = "Download Mosaic";
+          downloadLink.download = filename;
+          downloadLink.textContent = "Download";
           downloadLink.className = "download-button";
-
-          const resultDiv = document.getElementById("result");
-          resultDiv.innerHTML = "";
           resultDiv.appendChild(downloadLink);
         });
     </script>

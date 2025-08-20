@@ -106,6 +106,8 @@ async function generateMosaic(config) {
     mosaic += "\n";
   }
 
+  let toReturn;
+
   if (outputAsImage) {
     const emojiSize = 72;
     const spacing = 8;
@@ -207,11 +209,17 @@ async function generateMosaic(config) {
       console.error("Error deleting temp base directory:", err);
     }
 
-    return { buffer, mimeType: "image/png", filename: `mosaic.png` };
+    toReturn = { buffer, mimeType: "image/png", filename: `mosaic.png` };
   } else {
     const buffer = Buffer.from(mosaic, "utf8");
-    return { buffer, mimeType: "text/plain", filename: `mosaic.txt` };
+    toReturn = { buffer, mimeType: "text/plain", filename: `mosaic.txt` };
   }
+  fs.unlink(imagePath, (err) => {
+    if (err) {
+      console.error("Error deleting file:", err);
+    }
+  });
+  return toReturn;
 }
 
 module.exports = { generateMosaic };
