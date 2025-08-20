@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 
 const upload = multer({ dest: "uploads/" });
 
-app.post("/server", upload.single("image"), async (req, res) => {
+app.post("/api/run", upload.single("image"), async (req, res) => {
   try {
     const config = {
       design: req.body.design,
