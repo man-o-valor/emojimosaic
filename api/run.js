@@ -1,7 +1,6 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const { generateMosaic } = require("./mosaic.js");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,7 +52,6 @@ function parseRGB(str) {
 }
 
 const fs = require("fs");
-const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 const emojiUnicode = require("emoji-unicode");
 
