@@ -1,25 +1,21 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const { generateMosaic } = require("./index.js"); // Make sure this exports correctly
+const { generateMosaic } = require("./index.js");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware to parse form data
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Serve static files (like index.html)
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// Multer setup for file uploads
 const upload = multer({ dest: "uploads/" });
 
-// Main route to handle mosaic generation
 app.post("/run", upload.single("image"), async (req, res) => {
   try {
     const config = {
@@ -47,7 +43,6 @@ app.post("/run", upload.single("image"), async (req, res) => {
   }
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
