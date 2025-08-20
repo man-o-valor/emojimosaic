@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const { generateMosaic } = require("./index.js");
+const { generateMosaic } = require("./mosaic.js");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 
 const upload = multer({ dest: "uploads/" });
 
-app.post("/run", upload.single("image"), async (req, res) => {
+app.post("/server", upload.single("image"), async (req, res) => {
   try {
     const config = {
       design: req.body.design,

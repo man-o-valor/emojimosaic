@@ -2,7 +2,7 @@
   "name": "emojimosaic",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "mosaic.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/man-o-valor/emojimosaic.git"
